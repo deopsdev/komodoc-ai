@@ -7,7 +7,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function addMessage(text, sender) {
         const messageDiv = document.createElement('div');
         messageDiv.classList.add('message', sender);
-        messageDiv.textContent = text;
+        
+        // Convert newlines to line breaks for better readability
+        // Also handling basic Markdown-like paragraphs
+        const formattedText = text.split('\n').map(line => {
+            if (line.trim() === '') return '<br>'; // Preserve empty lines as spacing
+            return `<p>${line}</p>`; // Wrap lines in paragraphs
+        }).join('');
+        
+        messageDiv.innerHTML = formattedText; // Use innerHTML to render tags
         chatMessages.appendChild(messageDiv);
         
         // Scroll to the bottom

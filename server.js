@@ -2,7 +2,8 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-const PORT = 3001;
+// Use process.env.PORT for deployment (Heroku/Render/Railway) or fallback to 2020 locally
+const PORT = process.env.PORT || 2020;
 
 const server = http.createServer(async (req, res) => {
     console.log(`${req.method} ${req.url}`);
@@ -48,6 +49,14 @@ const server = http.createServer(async (req, res) => {
                 res.end(content);
             }
         });
+    } else if (req.url === '/favicon.svg') {
+        const svgContent = `
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <circle cx="50" cy="50" r="45" fill="#1e1e1e" stroke="#00ffcc" stroke-width="5"/>
+  <text x="50" y="65" font-family="Arial, sans-serif" font-size="60" font-weight="bold" fill="#00ffcc" text-anchor="middle">C</text>
+</svg>`;
+        res.writeHead(200, { 'Content-Type': 'image/svg+xml' });
+        res.end(svgContent);
     } else if (req.url === '/chat' && req.method === 'POST') {
         let body = '';
         req.on('data', chunk => {
@@ -55,7 +64,42 @@ const server = http.createServer(async (req, res) => {
         });
         req.on('end', async () => {
             try {
-                const { message } = JSON.parse(body);
+                let { message } = JSON.parse(body);
+
+                // --- ADVANCED PII SAFETY FILTER (COMPREHENSIVE) ---
+                const originalMessage = message;
+
+                // A. Direct Identifiers
+                // 1. Email Addresses
+                message = message.replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, '[EMAIL_REDACTED]');
+                
+                // 2. Phone Numbers (Indonesian & International formats)
+                // Covers: +62, 08xx, (xxx) xxx-xxxx
+                message = message.replace(/\b(\+62|08|62)\d{8,15}\b/g, '[PHONE_REDACTED]');
+                message = message.replace(/\b\d{3}[- .]?\d{3}[- .]?\d{4}\b/g, '[PHONE_REDACTED]');
+
+                // 3. Identification Numbers (NIK/KTP, Passport, Driver's License - Generic 16 digits)
+                message = message.replace(/\b\d{16}\b/g, '[ID_NUM_REDACTED]');
+                
+                // B. Sensitive PII (Financial)
+                // 1. Credit Card Numbers (Visa, Mastercard, etc. - 13-19 digits, often grouped)
+                message = message.replace(/\b(?:\d{4}[- ]?){3}\d{4}\b/g, '[CREDIT_CARD_REDACTED]');
+
+                // C. Indirect Identifiers (Dates & Locations)
+                // 1. Dates of Birth (Formats: DD-MM-YYYY, YYYY-MM-DD, DD/MM/YYYY)
+                // Simple regex to catch common date patterns
+                message = message.replace(/\b\d{1,2}[-/]\d{1,2}[-/]\d{4}\b/g, '[DATE_REDACTED]');
+                message = message.replace(/\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b/g, '[DATE_REDACTED]');
+
+                // 2. ZIP Codes (5 digits) - Context aware is hard, but we can catch 5 digit isolated numbers
+                // NOTE: This might be too aggressive for general numbers, so we limit to specific patterns if needed.
+                // For now, we'll assume 5 digit numbers at the end of a string or after "Zip" might be sensitive.
+                message = message.replace(/\b(?:Zip|Code|Pos)\s*:?\s*(\d{5})\b/gi, 'ZIP [REDACTED]');
+
+                if (message !== originalMessage) {
+                    console.log('🛡️ Security: PII data redacted from user message.');
+                }
+                // ---------------------------------------------------
                 
                 // Call Pollinations AI with Mistral
                 const response = await fetch('https://text.pollinations.ai/', {

@@ -1,0 +1,22 @@
+{
+  "name": "comodoc-ai",
+  "version": "1.0.0",
+  "description": "Comodoc - Your Privacy-Focused AI Helper",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js",
+    "dev": "node server.js"
+  },
+  "keywords": [
+    "ai",
+    "chatbot",
+    "mistral",
+    "privacy"
+  ],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {},
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}

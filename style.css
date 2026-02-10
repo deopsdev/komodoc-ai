@@ -20,13 +20,12 @@ body {
 header {
     text-align: center;
     border-bottom: 2px solid #333; /* Industrial divider */
-    padding-bottom: 10px;
-    margin-bottom: 10px;
+    padding-bottom: 20px;
+    margin-bottom: 20px;
 }
 
 h1 {
     color: #00ffcc; /* Cyan indicator light */
-    text-transform: uppercase;
     letter-spacing: 2px;
     font-size: 1.5em;
     margin: 0;
@@ -151,13 +150,22 @@ button:hover {
 
 /* Messages */
 .message {
-    margin: 5px 0;
-    padding: 10px 15px;
+    margin: 10px 0;
+    padding: 15px 20px;
     border-radius: 0; /* Squared corners for machine look */
     max-width: 80%;
     word-wrap: break-word;
-    font-size: 0.95em;
-    line-height: 1.5;
+    font-size: 1em;
+    line-height: 1.8; /* Increased for better readability */
+    letter-spacing: 0.5px; /* Slight spacing for clarity */
+}
+
+.message p {
+    margin-bottom: 15px; /* Add space between paragraphs */
+}
+
+.message p:last-child {
+    margin-bottom: 0;
 }
 
 .message.user {
