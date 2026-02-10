@@ -2,8 +2,8 @@ const http = require('http');
 const fs = require('fs');
 const path = require('path');
 
-// Use process.env.PORT for deployment (Heroku/Render/Railway) or fallback to 2020 locally
-const PORT = process.env.PORT || 2020;
+// Use process.env.PORT for deployment (Heroku/Render/Railway) or fallback to 3030 locally
+const PORT = process.env.PORT || 3030;
 
 const server = http.createServer(async (req, res) => {
     console.log(`${req.method} ${req.url}`);
@@ -64,40 +64,53 @@ const server = http.createServer(async (req, res) => {
         });
         req.on('end', async () => {
             try {
-                let { message } = JSON.parse(body);
+                // Expect an array of messages now
+                let { messages } = JSON.parse(body);
 
                 // --- ADVANCED PII SAFETY FILTER (COMPREHENSIVE) ---
-                const originalMessage = message;
+                // We only need to filter the LAST message from the user
+                if (messages && messages.length > 0) {
+                    const lastMsgIndex = messages.length - 1;
+                    const lastMsg = messages[lastMsgIndex];
 
-                // A. Direct Identifiers
-                // 1. Email Addresses
-                message = message.replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, '[EMAIL_REDACTED]');
-                
-                // 2. Phone Numbers (Indonesian & International formats)
-                // Covers: +62, 08xx, (xxx) xxx-xxxx
-                message = message.replace(/\b(\+62|08|62)\d{8,15}\b/g, '[PHONE_REDACTED]');
-                message = message.replace(/\b\d{3}[- .]?\d{3}[- .]?\d{4}\b/g, '[PHONE_REDACTED]');
+                    if (lastMsg.role === 'user') {
+                        let message = lastMsg.content;
+                        const originalMessage = message;
 
-                // 3. Identification Numbers (NIK/KTP, Passport, Driver's License - Generic 16 digits)
-                message = message.replace(/\b\d{16}\b/g, '[ID_NUM_REDACTED]');
-                
-                // B. Sensitive PII (Financial)
-                // 1. Credit Card Numbers (Visa, Mastercard, etc. - 13-19 digits, often grouped)
-                message = message.replace(/\b(?:\d{4}[- ]?){3}\d{4}\b/g, '[CREDIT_CARD_REDACTED]');
+                        // A. Direct Identifiers
+                        // 1. Email Addresses
+                        message = message.replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, '[EMAIL_REDACTED]');
+                        
+                        // 2. Phone Numbers (Indonesian & International formats)
+                        // Covers: +62, 08xx, (xxx) xxx-xxxx
+                        message = message.replace(/\b(\+62|08|62)\d{8,15}\b/g, '[PHONE_REDACTED]');
+                        message = message.replace(/\b\d{3}[- .]?\d{3}[- .]?\d{4}\b/g, '[PHONE_REDACTED]');
 
-                // C. Indirect Identifiers (Dates & Locations)
-                // 1. Dates of Birth (Formats: DD-MM-YYYY, YYYY-MM-DD, DD/MM/YYYY)
-                // Simple regex to catch common date patterns
-                message = message.replace(/\b\d{1,2}[-/]\d{1,2}[-/]\d{4}\b/g, '[DATE_REDACTED]');
-                message = message.replace(/\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b/g, '[DATE_REDACTED]');
+                        // 3. Identification Numbers (NIK/KTP, Passport, Driver's License - Generic 16 digits)
+                        message = message.replace(/\b\d{16}\b/g, '[ID_NUM_REDACTED]');
+                        
+                        // B. Sensitive PII (Financial)
+                        // 1. Credit Card Numbers (Visa, Mastercard, etc. - 13-19 digits, often grouped)
+                        message = message.replace(/\b(?:\d{4}[- ]?){3}\d{4}\b/g, '[CREDIT_CARD_REDACTED]');
 
-                // 2. ZIP Codes (5 digits) - Context aware is hard, but we can catch 5 digit isolated numbers
-                // NOTE: This might be too aggressive for general numbers, so we limit to specific patterns if needed.
-                // For now, we'll assume 5 digit numbers at the end of a string or after "Zip" might be sensitive.
-                message = message.replace(/\b(?:Zip|Code|Pos)\s*:?\s*(\d{5})\b/gi, 'ZIP [REDACTED]');
+                        // C. Indirect Identifiers (Dates & Locations)
+                        // 1. Dates of Birth (Formats: DD-MM-YYYY, YYYY-MM-DD, DD/MM/YYYY)
+                        // Simple regex to catch common date patterns
+                        message = message.replace(/\b\d{1,2}[-/]\d{1,2}[-/]\d{4}\b/g, '[DATE_REDACTED]');
+                        message = message.replace(/\b\d{4}[-/]\d{1,2}[-/]\d{1,2}\b/g, '[DATE_REDACTED]');
 
-                if (message !== originalMessage) {
-                    console.log('🛡️ Security: PII data redacted from user message.');
+                        // 2. ZIP Codes (5 digits) - Context aware is hard, but we can catch 5 digit isolated numbers
+                        // NOTE: This might be too aggressive for general numbers, so we limit to specific patterns if needed.
+                        // For now, we'll assume 5 digit numbers at the end of a string or after "Zip" might be sensitive.
+                        message = message.replace(/\b(?:Zip|Code|Pos)\s*:?\s*(\d{5})\b/gi, 'ZIP [REDACTED]');
+
+                        if (message !== originalMessage) {
+                            console.log('🛡️ Security: PII data redacted from user message.');
+                        }
+                        
+                        // Update the content in the array
+                        messages[lastMsgIndex].content = message;
+                    }
                 }
                 // ---------------------------------------------------
                 
@@ -109,7 +122,7 @@ const server = http.createServer(async (req, res) => {
                         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
                     },
                     body: JSON.stringify({
-                        messages: [{ role: 'user', content: message }],
+                        messages: messages, // Send the full history
                         model: 'mistral'
                     })
                 });

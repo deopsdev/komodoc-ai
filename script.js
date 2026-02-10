@@ -3,6 +3,11 @@ document.addEventListener('DOMContentLoaded', () => {
     const userInput = document.getElementById('user-input');
     const chatMessages = document.getElementById('chat-messages');
 
+    // Store conversation history
+    let conversationHistory = [
+        { role: 'system', content: 'You are Comodoc, a helpful, friendly, and secure AI assistant.' }
+    ];
+
     // Function to add a message to the chat
     function addMessage(text, sender) {
         const messageDiv = document.createElement('div');
@@ -31,6 +36,9 @@ document.addEventListener('DOMContentLoaded', () => {
         addMessage(text, 'user');
         userInput.value = '';
 
+        // Add to history
+        conversationHistory.push({ role: 'user', content: text });
+
         // Add loading indicator
         const loadingDiv = document.createElement('div');
         loadingDiv.classList.add('message', 'system');
@@ -45,7 +53,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ message: text })
+                body: JSON.stringify({ messages: conversationHistory })
             });
             
             if (!response.ok) {
@@ -62,6 +70,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 addMessage('Error: ' + data.error, 'system');
             } else {
                 addMessage(data.reply, 'ai');
+                // Add AI reply to history
+                conversationHistory.push({ role: 'assistant', content: data.reply });
             }
 
         } catch (error) {
@@ -77,14 +87,26 @@ document.addEventListener('DOMContentLoaded', () => {
     // Save chat functionality
     const saveButton = document.getElementById('save-button');
     saveButton.addEventListener('click', () => {
-        const messages = Array.from(chatMessages.querySelectorAll('.message'));
-        let chatHistory = '';
+        let chatHistory = "==================================================\n";
+        chatHistory += "             COMODOC AI - CHAT HISTORY            \n";
+        chatHistory += "==================================================\n";
+        chatHistory += `Date: ${new Date().toLocaleString()}\n`;
+        chatHistory += "--------------------------------------------------\n\n";
 
-        messages.forEach(msg => {
-            const role = msg.classList.contains('user') ? 'You' : 
-                         msg.classList.contains('ai') ? 'Komodoc' : 'System';
-            chatHistory += `${role}: ${msg.textContent}\n\n`;
-        });
+        // Use the conversationHistory array for cleaner data source
+        // Skipping the first system message
+        for (let i = 1; i < conversationHistory.length; i++) {
+            const msg = conversationHistory[i];
+            const role = msg.role === 'user' ? 'YOU' : 'COMODOC';
+            
+            chatHistory += `[${role}]\n`;
+            chatHistory += `${msg.content}\n`;
+            chatHistory += "--------------------------------------------------\n\n";
+        }
+        
+        chatHistory += "==================================================\n";
+        chatHistory += "End of Transcript\n";
+        chatHistory += "==================================================";
 
         const blob = new Blob([chatHistory], { type: 'text/plain' });
         const url = URL.createObjectURL(blob);
