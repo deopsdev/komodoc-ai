@@ -44,10 +44,10 @@
                 <div class="projects">
                     <h2 class="projects-title">Projects</h2>
                     <div class="project-item">
-                        <a href="https://komodoc-ai.vercel.app" target="_blank">
+                        <a href="https://komodoc-ai.vercel.app" target="_blank" class="project-link">
                             <img src="comodocaiimage.png" alt="Comodoc AI Project Preview" class="project-preview">
                         </a>
-                        <p><a href="https://komodoc-ai.vercel.app" target="_blank">Comodoc AI</a></p>
+                        <p><a href="https://komodoc-ai.vercel.app" target="_blank" class="project-link">Comodoc AI</a></p>
                     </div>
                 </div>
             </section>
@@ -87,6 +87,19 @@
             window.addEventListener('resize', scaleContent);
             window.addEventListener('load', scaleContent);
             scaleContent();
+
+            // Project link delay effect
+            document.querySelectorAll('.project-link').forEach(link => {
+                link.addEventListener('click', function(e) {
+                    e.preventDefault();
+                    const href = this.getAttribute('href');
+                    const target = this.getAttribute('target');
+                    
+                    setTimeout(() => {
+                        window.open(href, target || '_self');
+                    }, 500); // 500ms delay
+                });
+            });
         </script>
     </body>
 </html>
